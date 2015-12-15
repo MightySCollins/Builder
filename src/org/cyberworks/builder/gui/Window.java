@@ -35,6 +35,8 @@ public class Window {
     private JButton startHashButton;
     private JProgressBar hashProgress;
     private JPanel modSelect;
+    private JTextField outputDir;
+    private JButton selectOutputDirButton;
 
     public Window() {
         try {
@@ -46,42 +48,52 @@ public class Window {
         startHashButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (!getModDir().isEmpty()) {
-                    try {
-                        JAXBContext jc = JAXBContext.newInstance(Mods.class);
-                        Mods mods = new Mods();
-                        mods.setModFiles(new ArrayList<>());
+                Runnable runner;
+                runner = () -> {
+                    if (!getModDir().isEmpty()) {
+                        try {
+                            JAXBContext jc = JAXBContext.newInstance(Mods.class);
+                            Mods mods = new Mods();
+                            mods.setModFiles(new ArrayList<>());
 
-                        try (Stream<Path> paths = Files.walk(Paths.get(getModDir()))) {
+                            try (Stream<Path> paths = Files.walk(Paths.get(getModDir()))) {
+                                int documentIndex = getModDir().length();
 
-                            paths.forEach(filePath -> {
-                                try {
-                                    File mod = new File(filePath.toString());
-                                    if (mod.isFile() && mod.exists()) {
-                                        ModFile curFile = new ModFile();
-                                        curFile.setName(mod.getName());
-                                        curFile.setFolder(filePath.toString());
-                                        curFile.setHash(calcSHA1(mod));
-                                        mods.getModFiles().add(curFile);
+                                paths.forEach(filePath -> {
+                                    try {
+                                        File mod = new File(filePath.toString());
+                                        if (mod.isFile() && mod.exists()) {
+                                            ModFile curFile = new ModFile();
+                                            curFile.setName(mod.getName());
+                                            curFile.setFolder(filePath.toString().substring(documentIndex));
+                                            curFile.setHash(calcSHA1(mod));
+                                            mods.getModFiles().add(curFile);
+                                        }
+                                    } catch (IOException | NoSuchAlgorithmException ex) {
+                                        Logger.getLogger("builder").log(Level.SEVERE, null, ex);
                                     }
-                                } catch (IOException | NoSuchAlgorithmException ex) {
-                                    Logger.getLogger("builder").log(Level.SEVERE, null, ex);
-                                }
-                            });
+                                });
 
-                        } catch (IOException ex) {
+                            } catch (IOException ex) {
+                                Logger.getLogger("builder").log(Level.SEVERE, null, ex);
+                            }
+
+                            Marshaller marshaller = jc.createMarshaller();
+                            marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+                            marshaller.marshal(mods, System.out);
+                            XMLDisplay display = new XMLDisplay();
+                            File GenXml = new File(outputDir.getText());
+                            marshaller.marshal( mods, GenXml);
+                            display.main(GenXml.toString());
+                        } catch (Exception ex) {
                             Logger.getLogger("builder").log(Level.SEVERE, null, ex);
                         }
-
-                        Marshaller marshaller = jc.createMarshaller();
-                        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-                        marshaller.marshal(mods, System.out);
-                    } catch (Exception ex) {
-                        Logger.getLogger("builder").log(Level.SEVERE, null, ex);
+                    } else {
+                        Logger.getLogger("builder").log(Level.SEVERE, "No file is set");
                     }
-                } else {
-                    Logger.getLogger("builder").log(Level.SEVERE, "No file is set");
-                }
+                };
+                Thread t = new Thread(runner, "Hash Files");
+                t.start();
             }
         });
         selectDirButton.addActionListener(new ActionListener() {
@@ -102,11 +114,28 @@ public class Window {
                 }
             }
         });
+        selectOutputDirButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JFileChooser chooser = new JFileChooser();
+                chooser.setCurrentDirectory(new File(System.getProperty("user.home") + "/Documents"));
+                chooser.setDialogTitle("Select Output Directory");
+                chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                chooser.setAcceptAllFileFilterUsed(false);
+
+                if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+                    System.out.print(chooser.getSelectedFile().getAbsolutePath());
+                    setModDir(chooser.getSelectedFile().getAbsolutePath());
+                } else {
+                    System.out.print("Nope");
+                    //utils.showErrMsg(this, "Please select a mod directory");
+                }
+            }
+        });
         modDir.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.print(modDir.getText());
-                setModDir("asddas");
             }
         });
     }

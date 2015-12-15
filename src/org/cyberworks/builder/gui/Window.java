@@ -125,7 +125,7 @@ public class Window {
 
                 if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
                     System.out.print(chooser.getSelectedFile().getAbsolutePath());
-                    setModDir(chooser.getSelectedFile().getAbsolutePath());
+                    setOutputDir(chooser.getSelectedFile().getAbsolutePath());
                 } else {
                     System.out.print("Nope");
                     //utils.showErrMsg(this, "Please select a mod directory");
@@ -154,6 +154,10 @@ public class Window {
 
     public void setModDir(String dir) {
         modDir.setText(dir);
+    }
+
+    public void setOutputDir(String dir) {
+        outputDir.setText(dir);
     }
 
     public String getModDir() {
